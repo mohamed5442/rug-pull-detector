@@ -1,0 +1,119 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff2255;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff8800;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#030308;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0815;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="safe" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ddff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Scan lines -->
+  <g opacity="0.02">
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="4" x2="1200" y2="4" stroke="#00ff88" stroke-width="1"/>
+    <line x1="0" y1="8" x2="1200" y2="8" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="12" x2="1200" y2="12" stroke="#00ff88" stroke-width="1"/>
+  </g>
+
+  <!-- Glow -->
+  <ellipse cx="400" cy="300" rx="500" ry="350" fill="#ff2255" opacity="0.04"/>
+  <ellipse cx="800" cy="350" rx="400" ry="300" fill="#ff8800" opacity="0.03"/>
+
+  <!-- Top bar -->
+  <rect x="0" y="0" width="1200" height="4" fill="url(#grad)"/>
+
+  <!-- Warning icon -->
+  <g transform="translate(100, 100)">
+    <circle cx="25" cy="25" r="25" fill="rgba(255,34,85,0.15)" stroke="rgba(255,34,85,0.4)" stroke-width="2"/>
+    <text x="25" y="35" font-family="system-ui" font-size="30" fill="#ff2255" text-anchor="middle" font-weight="900">!</text>
+  </g>
+
+  <text x="165" y="128" font-family="monospace" font-size="14" fill="#ff2255" font-weight="700">SCANNING</text>
+
+  <!-- Title -->
+  <text x="100" y="220" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="900" fill="#e4e4ef" letter-spacing="-2">
+    rug detector
+  </text>
+
+  <text x="100" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#8888a0" font-weight="500">
+    Solana Token Safety Scanner — Real-Time Analysis
+  </text>
+
+  <!-- Simulated token scan results -->
+  <g transform="translate(100, 310)">
+    <!-- Token 1 — SAFE -->
+    <rect x="0" y="0" width="500" height="52" rx="10" fill="#08081a" stroke="#00ff8833" stroke-width="1"/>
+    <rect x="0" y="0" width="4" height="52" rx="2" fill="#00ff88"/>
+    <circle cx="30" cy="26" r="14" fill="rgba(0,255,136,0.1)" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+    <text x="30" y="31" font-family="monospace" font-size="12" fill="#00ff88" text-anchor="middle" font-weight="800">A</text>
+    <text x="56" y="24" font-family="system-ui" font-size="14" fill="#e4e4ef" font-weight="700">AetherAI</text>
+    <text x="135" y="24" font-family="monospace" font-size="11" fill="#555577">$AETH</text>
+    <text x="56" y="40" font-family="monospace" font-size="9" fill="#555577">7kXz...9mPq</text>
+    <text x="400" y="30" font-family="monospace" font-size="28" fill="#00ff88" font-weight="900" text-anchor="end">12</text>
+    <rect x="415" y="16" width="60" height="22" rx="5" fill="rgba(0,255,136,0.1)" stroke="rgba(0,255,136,0.2)" stroke-width="1"/>
+    <text x="445" y="31" font-family="monospace" font-size="10" fill="#00ff88" text-anchor="middle" font-weight="700">SAFE</text>
+  </g>
+
+  <g transform="translate(100, 370)">
+    <!-- Token 2 — DANGER -->
+    <rect x="0" y="0" width="500" height="52" rx="10" fill="#08081a" stroke="#ff225533" stroke-width="1"/>
+    <rect x="0" y="0" width="4" height="52" rx="2" fill="#ff2255"/>
+    <circle cx="30" cy="26" r="14" fill="rgba(255,34,85,0.1)" stroke="rgba(255,34,85,0.3)" stroke-width="1"/>
+    <text x="30" y="31" font-family="monospace" font-size="12" fill="#ff44aa" text-anchor="middle" font-weight="800">P</text>
+    <text x="56" y="24" font-family="system-ui" font-size="14" fill="#e4e4ef" font-weight="700">PumpFrog</text>
+    <text x="140" y="24" font-family="monospace" font-size="11" fill="#555577">$PFROG</text>
+    <text x="56" y="40" font-family="monospace" font-size="9" fill="#555577">3mNk...wR4t</text>
+    <text x="400" y="30" font-family="monospace" font-size="28" fill="#ff2255" font-weight="900" text-anchor="end">87</text>
+    <rect x="415" y="16" width="80" height="22" rx="5" fill="rgba(255,34,85,0.15)" stroke="rgba(255,34,85,0.3)" stroke-width="1"/>
+    <text x="455" y="31" font-family="monospace" font-size="10" fill="#ff2255" text-anchor="middle" font-weight="700">RUG ALERT</text>
+  </g>
+
+  <g transform="translate(100, 430)">
+    <!-- Token 3 — WARNING -->
+    <rect x="0" y="0" width="500" height="52" rx="10" fill="#08081a" stroke="#ff880033" stroke-width="1"/>
+    <rect x="0" y="0" width="4" height="52" rx="2" fill="#ff8800"/>
+    <circle cx="30" cy="26" r="14" fill="rgba(255,136,0,0.1)" stroke="rgba(255,136,0,0.3)" stroke-width="1"/>
+    <text x="30" y="31" font-family="monospace" font-size="12" fill="#ffcc00" text-anchor="middle" font-weight="800">N</text>
+    <text x="56" y="24" font-family="system-ui" font-size="14" fill="#e4e4ef" font-weight="700">NexusSwap</text>
+    <text x="148" y="24" font-family="monospace" font-size="11" fill="#555577">$NXSW</text>
+    <text x="56" y="40" font-family="monospace" font-size="9" fill="#555577">9pLq...kT2f</text>
+    <text x="400" y="30" font-family="monospace" font-size="28" fill="#ff8800" font-weight="900" text-anchor="end">45</text>
+    <rect x="415" y="16" width="72" height="22" rx="5" fill="rgba(255,136,0,0.1)" stroke="rgba(255,136,0,0.2)" stroke-width="1"/>
+    <text x="451" y="31" font-family="monospace" font-size="10" fill="#ff8800" text-anchor="middle" font-weight="700">CAUTION</text>
+  </g>
+
+  <!-- Stats sidebar -->
+  <g transform="translate(700, 310)">
+    <rect x="0" y="0" width="400" height="170" rx="14" fill="#08081a" stroke="#161633" stroke-width="1"/>
+    <text x="24" y="36" font-family="monospace" font-size="11" fill="#555577" font-weight="700" letter-spacing="1.5">RISK FACTORS CHECKED</text>
+
+    <text x="24" y="66" font-family="system-ui" font-size="13" fill="#e4e4ef">Mint Authority</text>
+    <text x="370" y="66" font-family="monospace" font-size="13" fill="#00ff88" text-anchor="end" font-weight="700">REVOKED</text>
+
+    <text x="24" y="92" font-family="system-ui" font-size="13" fill="#e4e4ef">Liquidity Lock</text>
+    <text x="370" y="92" font-family="monospace" font-size="13" fill="#ff2255" text-anchor="end" font-weight="700">UNLOCKED</text>
+
+    <text x="24" y="118" font-family="system-ui" font-size="13" fill="#e4e4ef">Top Holder</text>
+    <text x="370" y="118" font-family="monospace" font-size="13" fill="#ff8800" text-anchor="end" font-weight="700">67.3%</text>
+
+    <text x="24" y="144" font-family="system-ui" font-size="13" fill="#e4e4ef">LP Burned</text>
+    <text x="370" y="144" font-family="monospace" font-size="13" fill="#00ff88" text-anchor="end" font-weight="700">YES</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="100" y="555" font-family="system-ui" font-size="16" fill="#555577">
+    Free &amp; open source — Protect your bags before aping in
+  </text>
+  <text x="1100" y="590" font-family="monospace" font-size="16" fill="#555577" text-anchor="end" font-weight="600">visioneth</text>
+
+  <rect x="0" y="626" width="1200" height="4" fill="url(#grad)"/>
+</svg>

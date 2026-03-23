@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rug Pull Detector — Solana Token Safety Scanner</title>
+  <meta name="description" content="Real-time Solana token safety scanner. Detects rug pulls before they happen. Free, open source.">
+  <meta property="og:title" content="Rug Pull Detector — Solana Token Safety Scanner">
+  <meta property="og:description" content="Scans new Solana tokens for rug pull risk. Liquidity locks, ownership concentration, mint authority, holder distribution.">
+  <meta property="og:image" content="https://visioneth.github.io/rug-pull-detector/og-image.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Rug Pull Detector">
+  <meta name="twitter:description" content="Real-time Solana rug pull scanner. Protect your bags.">
+  <meta name="twitter:image" content="https://visioneth.github.io/rug-pull-detector/og-image.svg">
+
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #030308;
+      --bg2: #08081a;
+      --bg3: #0d0d22;
+      --border: #161633;
+      --text: #e0e0f0;
+      --dim: #555577;
+      --green: #00ff88;
+      --red: #ff2255;
+      --orange: #ff8800;
+      --yellow: #ffcc00;
+      --blue: #4488ff;
+      --purple: #9955ff;
+      --cyan: #00ddff;
+      --pink: #ff44aa;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Animated scan lines */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,255,136,0.008) 2px,
+        rgba(0,255,136,0.008) 4px
+      );
+    }
+
+    /* Radar sweep */
+    .radar-bg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 800px;
+      height: 800px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .radar-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(0,255,136,0.04);
+    }
+
+    .radar-ring:nth-child(1) { inset: 0; }
+    .radar-ring:nth-child(2) { inset: 80px; }
+    .radar-ring:nth-child(3) { inset: 160px; }
+    .radar-ring:nth-child(4) { inset: 240px; }
+    .radar-ring:nth-child(5) { inset: 320px; }
+
+    .radar-sweep {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50%;
+      height: 2px;
+      transform-origin: left center;
+      background: linear-gradient(90deg, rgba(0,255,136,0.3), transparent);
+      animation: sweep 4s linear infinite;
+    }
+
+    @keyframes sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Floating threat particles */
+    .threats {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .threat-dot {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      opacity: 0;
+      animation: threatFloat linear infinite;
+    }
+
+    @keyframes threatFloat {
+      0% { opacity: 0; transform: scale(0) translateY(20px); }
+      20% { opacity: 0.8; transform: scale(1) translateY(0); }
+      80% { opacity: 0.3; }
+      100% { opacity: 0; transform: scale(0.5) translateY(-30px); }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--red), var(--orange));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px rgba(255,34,85,0.3);
+      animation: logoPulse 2s ease infinite;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255,34,85,0.3); }
+      50% { box-shadow: 0 0 30px rgba(255,34,85,0.5); }
+    }
+
+    .logo-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text .rug { color: var(--red); }
+    .logo-text .pull { color: var(--orange); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .scan-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,34,85,0.08);
+      border: 1px solid rgba(255,34,85,0.25);
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .scan-icon {
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--red);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .scan-text { color: var(--red); }
+    .scan-count { color: var(--yellow); }
+
+    .gh-link {
+      color: var(--dim);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+    .gh-link:hover { color: var(--text); }
+
+    /* Score overview bar */
+    .overview-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .ov-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ov-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .ov-card.safe::before { background: var(--green); }
+    .ov-card.warning::before { background: var(--orange); }
+    .ov-card.danger::before { background: var(--red); }
+    .ov-card.info::before { background: var(--cyan); }
+
+    .ov-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+
+    .ov-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px;
+      font-weight: 900;
+    }
+
+    .ov-val.safe { color: var(--green); }
+    .ov-val.warning { color: var(--orange); }
+    .ov-val.danger { color: var(--red); }
+    .ov-val.info { color: var(--cyan); }
+
+    .ov-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    /* Main layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 16px;
+    }
+
+    /* Token scanner */
+    .scanner-panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+    }
+
+    .panel-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .scanner-body {
+      max-height: 680px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .scanner-body::-webkit-scrollbar { width: 4px; }
+    .scanner-body::-webkit-scrollbar-track { background: transparent; }
+    .scanner-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Token card in feed */
+    .token-card {
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.025);
+      animation: cardIn 0.5s ease;
+      transition: background 0.2s;
+      cursor: default;
+    }
+
+    .token-card:hover { background: rgba(255,255,255,0.015); }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .token-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .token-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .token-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .token-name {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .token-ticker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .token-addr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 2px;
+    }
+
+    /* Risk score */
+    .risk-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 28px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .risk-score .label {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .risk-safe .label { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+    .risk-warning .label { background: rgba(255,136,0,0.1); color: var(--orange); border: 1px solid rgba(255,136,0,0.2); }
+    .risk-danger .label { background: rgba(255,34,85,0.1); color: var(--red); border: 1px solid rgba(255,34,85,0.2); }
+    .risk-critical .label { background: rgba(255,34,85,0.2); color: var(--red); border: 1px solid rgba(255,34,85,0.4); animation: criticalPulse 1s ease infinite; }
+
+    @keyframes criticalPulse {
+      0%, 100% { box-shadow: 0 0 5px rgba(255,34,85,0.3); }
+      50% { box-shadow: 0 0 15px rgba(255,34,85,0.5); }
+    }
+
+    /* Risk bar visualization */
+    .risk-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .risk-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .risk-item-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .risk-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .risk-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    .risk-fill.green { background: var(--green); box-shadow: 0 0 8px rgba(0,255,136,0.3); }
+    .risk-fill.yellow { background: var(--yellow); box-shadow: 0 0 8px rgba(255,204,0,0.3); }
+    .risk-fill.orange { background: var(--orange); box-shadow: 0 0 8px rgba(255,136,0,0.3); }
+    .risk-fill.red { background: var(--red); box-shadow: 0 0 8px rgba(255,34,85,0.3); }
+
+    .risk-item-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* Side panel */
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-panel, .recent-rugs, .input-panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    /* Search input */
+    .search-box {
+      padding: 16px 22px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 12px rgba(255,34,85,0.15);
+    }
+
+    .search-input::placeholder { color: var(--dim); }
+
+    /* Rug pull feed (recent rugs) */
+    .rug-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 60px;
+      align-items: center;
+      padding: 12px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      font-size: 12px;
+    }
+
+    .rug-name {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .rug-name .sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .rug-loss {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      color: var(--red);
+      text-align: right;
+      font-size: 13px;
+    }
+
+    .rug-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--dim);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    /* Risk detail breakdown */
+    .detail-body {
+      padding: 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+    }
+
+    .detail-key {
+      font-size: 12px;
+      color: var(--dim);
+      font-weight: 600;
+    }
+
+    .detail-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .detail-val.pass { color: var(--green); }
+    .detail-val.fail { color: var(--red); }
+    .detail-val.warn { color: var(--orange); }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 28px;
+      color: var(--dim);
+      font-size: 13px;
+      margin-top: 24px;
+    }
+    .footer a { color: var(--green); text-decoration: none; }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .overview-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 500px) {
+      .overview-bar { grid-template-columns: 1fr; }
+      .risk-bars { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Glow line under header */
+    .glow-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--red), var(--orange), var(--yellow), transparent);
+      opacity: 0.3;
+      margin-bottom: 20px;
+    }
+
+    /* Neon flash for critical tokens */
+    .token-card.critical {
+      border-left: 3px solid var(--red);
+      background: rgba(255,34,85,0.03);
+    }
+
+    .token-card.safe-card {
+      border-left: 3px solid var(--green);
+    }
+
+    .token-card.warning-card {
+      border-left: 3px solid var(--orange);
+    }
+  </style>
+</head>
+<body>
+  <!-- Visual effects -->
+  <div class="scanlines"></div>
+  <div class="radar-bg">
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-sweep"></div>
+  </div>
+  <div class="threats" id="threats"></div>
+
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">!</div>
+        <div class="logo-text">
+          <span class="rug">rug</span><span class="pull">detector</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="scan-badge">
+          <div class="scan-icon"></div>
+          <span class="scan-text">SCANNING</span>
+          <span class="scan-count" id="scan-total">0 tokens</span>
+        </div>
+        <a href="https://github.com/visioneth/rug-pull-detector" class="gh-link">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </header>
+
+    <div class="glow-line"></div>
+
+    <!-- Overview stats -->
+    <div class="overview-bar">
+      <div class="ov-card safe">
+        <div class="ov-label">Safe Tokens</div>
+        <div class="ov-val safe" id="safe-count">0</div>
+        <div class="ov-sub">Risk &lt; 30</div>
+      </div>
+      <div class="ov-card warning">
+        <div class="ov-label">Suspicious</div>
+        <div class="ov-val warning" id="warn-count">0</div>
+        <div class="ov-sub">Risk 30-69</div>
+      </div>
+      <div class="ov-card danger">
+        <div class="ov-label">Danger</div>
+        <div class="ov-val danger" id="danger-count">0</div>
+        <div class="ov-sub">Risk 70-100</div>
+      </div>
+      <div class="ov-card info">
+        <div class="ov-label">Tokens Scanned</div>
+        <div class="ov-val info" id="scanned-count">0</div>
+        <div class="ov-sub">Last 24 hours</div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-grid">
+      <!-- Token scanner feed -->
+      <div class="scanner-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>TOKEN SCANNER</span>
+          </div>
+          <div class="panel-sub">New launches analyzed in real-time</div>
+        </div>
+        <div class="scanner-body" id="scanner-feed"></div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="side-panel">
+        <!-- Search -->
+        <div class="input-panel">
+          <div class="panel-header">
+            <div class="panel-title">SCAN TOKEN</div>
+          </div>
+          <div class="search-box">
+            <input type="text" class="search-input" id="token-input" placeholder="Paste Solana token address..." />
+          </div>
+        </div>
+
+        <!-- Risk breakdown for selected token -->
+        <div class="detail-panel">
+          <div class="panel-header">
+            <div class="panel-title">RISK BREAKDOWN</div>
+            <div class="panel-sub" id="detail-token">Select a token</div>
+          </div>
+          <div class="detail-body" id="detail-body">
+            <div class="detail-row">
+              <div class="detail-key">Mint Authority</div>
+              <div class="detail-val" id="d-mint">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Freeze Authority</div>
+              <div class="detail-val" id="d-freeze">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Liquidity Locked</div>
+              <div class="detail-val" id="d-liq">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Top Holder %</div>
+              <div class="detail-val" id="d-holder">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">LP Burn</div>
+              <div class="detail-val" id="d-burn">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Contract Verified</div>
+              <div class="detail-val" id="d-verified">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Holder Count</div>
+              <div class="detail-val" id="d-holders">--</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Age</div>
+              <div class="detail-val" id="d-age">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent rugs -->
+        <div class="recent-rugs">
+          <div class="panel-header">
+            <div class="panel-title" style="color: var(--red);">RECENT RUGS</div>
+            <div class="panel-sub">Confirmed rug pulls</div>
+          </div>
+          <div id="rug-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      Built by <a href="https://github.com/visioneth">visioneth</a> &middot;
+      <a href="https://github.com/visioneth/rug-pull-detector">GitHub</a> &middot;
+      Not financial advice. DYOR.
+    </footer>
+  </div>
+
+  <script>
+    // ===== THREAT PARTICLES =====
+    const threatsEl = document.getElementById('threats');
+    for (let i = 0; i < 30; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'threat-dot';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.top = Math.random() * 100 + '%';
+      dot.style.animationDuration = (3 + Math.random() * 5) + 's';
+      dot.style.animationDelay = (Math.random() * 6) + 's';
+
+      const r = Math.random();
+      if (r > 0.7) {
+        dot.style.background = '#ff2255';
+        dot.style.boxShadow = '0 0 8px #ff2255';
+      } else if (r > 0.4) {
+        dot.style.background = '#ff8800';
+        dot.style.boxShadow = '0 0 8px #ff8800';
+      } else {
+        dot.style.background = '#00ff88';
+        dot.style.boxShadow = '0 0 8px #00ff88';
+      }
+
+      threatsEl.appendChild(dot);
+    }
+
+    // ===== SIMULATED TOKEN DATA =====
+    // Realistic Solana token names
+    const TOKEN_NAMES = [
+      { name: 'SolPup', ticker: 'SPUP', vibe: 'meme' },
+      { name: 'AetherAI', ticker: 'AETH', vibe: 'ai' },
+      { name: 'LunarDoge', ticker: 'LDOGE', vibe: 'meme' },
+      { name: 'ChainMind', ticker: 'CMND', vibe: 'ai' },
+      { name: 'PumpFrog', ticker: 'PFROG', vibe: 'meme' },
+      { name: 'NexusSwap', ticker: 'NXSW', vibe: 'defi' },
+      { name: 'DegenCat', ticker: 'DCAT', vibe: 'meme' },
+      { name: 'QuantumBit', ticker: 'QBIT', vibe: 'tech' },
+      { name: 'MoonShiba', ticker: 'MSHIB', vibe: 'meme' },
+      { name: 'SynapseDAO', ticker: 'SYNP', vibe: 'dao' },
+      { name: 'FlokiSol', ticker: 'FSOL', vibe: 'meme' },
+      { name: 'VortexFi', ticker: 'VRTX', vibe: 'defi' },
+      { name: 'RocketApe', ticker: 'RAPE', vibe: 'meme' },
+      { name: 'MetaVerse3', ticker: 'MV3', vibe: 'meta' },
+      { name: 'BabyPepe', ticker: 'BPEPE', vibe: 'meme' },
+      { name: 'OmniChain', ticker: 'OMNI', vibe: 'infra' },
+      { name: 'SolBull', ticker: 'SBULL', vibe: 'meme' },
+      { name: 'NeuralNet', ticker: 'NNET', vibe: 'ai' },
+      { name: 'CryptoKing', ticker: 'CKING', vibe: 'meme' },
+      { name: 'YieldMax', ticker: 'YMAX', vibe: 'defi' },
+      { name: 'PepeGold', ticker: 'PGOLD', vibe: 'meme' },
+      { name: 'SolanaGPT', ticker: 'SGPT', vibe: 'ai' },
+      { name: 'DiamondPaw', ticker: 'DPAW', vibe: 'meme' },
+      { name: 'TrumpSol', ticker: 'TSOL', vibe: 'meme' },
+      { name: 'ZeroLayer', ticker: 'ZERO', vibe: 'infra' },
+    ];
+
+    const VIBE_COLORS = {
+      meme: '#ff44aa',
+      ai: '#4488ff',
+      defi: '#00ff88',
+      tech: '#00ddff',
+      dao: '#9955ff',
+      meta: '#ffcc00',
+      infra: '#ff8800',
+    };
+
+    let totalScanned = 0;
+    let safeCount = 0;
+    let warnCount = 0;
+    let dangerCount = 0;
+
+    function randomAddr() {
+      const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      let addr = '';
+      for (let i = 0; i < 44; i++) addr += chars[Math.floor(Math.random() * chars.length)];
+      return addr;
+    }
+
+    function generateToken() {
+      const token = TOKEN_NAMES[Math.floor(Math.random() * TOKEN_NAMES.length)];
+      const addr = randomAddr();
+
+      // Risk factors
+      const mintRevoked = Math.random() > 0.35;
+      const freezeRevoked = Math.random() > 0.4;
+      const liqLocked = Math.random() > 0.45;
+      const lpBurned = Math.random() > 0.5;
+      const verified = Math.random() > 0.6;
+
+      const topHolderPct = Math.random() > 0.6
+        ? (5 + Math.random() * 15)   // healthy
+        : (30 + Math.random() * 60);  // concentrated
+
+      const holderCount = Math.random() > 0.5
+        ? Math.floor(500 + Math.random() * 10000)
+        : Math.floor(10 + Math.random() * 200);
+
+      const ageHours = Math.random() > 0.5
+        ? Math.floor(24 + Math.random() * 720)
+        : Math.floor(1 + Math.random() * 12);
+
+      // Calculate risk score (0 = safe, 100 = rug)
+      let risk = 0;
+      if (!mintRevoked) risk += 25;
+      if (!freezeRevoked) risk += 15;
+      if (!liqLocked) risk += 20;
+      if (!lpBurned) risk += 10;
+      if (!verified) risk += 5;
+      if (topHolderPct > 50) risk += 15;
+      else if (topHolderPct > 30) risk += 8;
+      if (holderCount < 100) risk += 10;
+      if (ageHours < 6) risk += 5;
+
+      // Add some randomness
+      risk = Math.max(0, Math.min(100, risk + (Math.random() * 10 - 5)));
+
+      let riskLevel;
+      if (risk < 30) riskLevel = 'safe';
+      else if (risk < 50) riskLevel = 'warning';
+      else if (risk < 75) riskLevel = 'danger';
+      else riskLevel = 'critical';
+
+      return {
+        ...token,
+        addr,
+        risk: Math.round(risk),
+        riskLevel,
+        mintRevoked,
+        freezeRevoked,
+        liqLocked,
+        lpBurned,
+        verified,
+        topHolderPct,
+        holderCount,
+        ageHours,
+        time: new Date(),
+      };
+    }
+
+    function getRiskColor(risk) {
+      if (risk < 30) return 'green';
+      if (risk < 50) return 'yellow';
+      if (risk < 75) return 'orange';
+      return 'red';
+    }
+
+    function addTokenToFeed(token) {
+      const feed = document.getElementById('scanner-feed');
+      const card = document.createElement('div');
+      const cardClass = token.riskLevel === 'critical' || token.riskLevel === 'danger' ? 'critical' :
+                        token.riskLevel === 'safe' ? 'safe-card' : 'warning-card';
+      card.className = `token-card ${cardClass}`;
+
+      const vibeColor = VIBE_COLORS[token.vibe] || '#888';
+      const riskColor = getRiskColor(token.risk);
+
+      const riskLabelMap = {
+        safe: 'SAFE',
+        warning: 'CAUTION',
+        danger: 'DANGER',
+        critical: 'RUG ALERT'
+      };
+
+      card.innerHTML = `
+        <div class="token-top">
+          <div class="token-info">
+            <div class="token-icon" style="background: ${vibeColor}22; color: ${vibeColor}; border: 1px solid ${vibeColor}44;">
+              ${token.ticker.charAt(0)}
+            </div>
+            <div>
+              <div class="token-name">${token.name} <span style="color: var(--dim); font-weight: 400; font-size: 12px;">$${token.ticker}</span></div>
+              <div class="token-addr">${token.addr.slice(0, 8)}...${token.addr.slice(-6)}</div>
+            </div>
+          </div>
+          <div class="risk-score risk-${token.riskLevel}">
+            ${token.risk}
+            <span class="label">${riskLabelMap[token.riskLevel]}</span>
+          </div>
+        </div>
+        <div class="risk-bars">
+          <div class="risk-item">
+            <div class="risk-item-label">Mint Auth</div>
+            <div class="risk-bar"><div class="risk-fill ${token.mintRevoked ? 'green' : 'red'}" style="width: ${token.mintRevoked ? 100 : 100}%"></div></div>
+            <div class="risk-item-val" style="color: var(--${token.mintRevoked ? 'green' : 'red'})">${token.mintRevoked ? 'Revoked' : 'ACTIVE'}</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-item-label">Liq Lock</div>
+            <div class="risk-bar"><div class="risk-fill ${token.liqLocked ? 'green' : 'red'}" style="width: 100%"></div></div>
+            <div class="risk-item-val" style="color: var(--${token.liqLocked ? 'green' : 'red'})">${token.liqLocked ? 'Locked' : 'UNLOCKED'}</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-item-label">Top Holder</div>
+            <div class="risk-bar"><div class="risk-fill ${token.topHolderPct < 20 ? 'green' : token.topHolderPct < 40 ? 'yellow' : 'red'}" style="width: ${Math.min(100, token.topHolderPct)}%"></div></div>
+            <div class="risk-item-val" style="color: var(--${token.topHolderPct < 20 ? 'green' : token.topHolderPct < 40 ? 'yellow' : 'red'})">${token.topHolderPct.toFixed(1)}%</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-item-label">Holders</div>
+            <div class="risk-bar"><div class="risk-fill ${token.holderCount > 500 ? 'green' : token.holderCount > 100 ? 'yellow' : 'red'}" style="width: ${Math.min(100, token.holderCount / 100)}%"></div></div>
+            <div class="risk-item-val" style="color: var(--${token.holderCount > 500 ? 'green' : token.holderCount > 100 ? 'yellow' : 'red'})">${token.holderCount.toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => showDetail(token));
+
+      feed.insertBefore(card, feed.firstChild);
+      totalScanned++;
+
+      if (token.risk < 30) safeCount++;
+      else if (token.risk < 70) warnCount++;
+      else dangerCount++;
+
+      document.getElementById('safe-count').textContent = safeCount;
+      document.getElementById('warn-count').textContent = warnCount;
+      document.getElementById('danger-count').textContent = dangerCount;
+      document.getElementById('scanned-count').textContent = totalScanned;
+      document.getElementById('scan-total').textContent = totalScanned + ' tokens';
+
+      // Add to recent rugs if critical
+      if (token.risk >= 70) {
+        addRecentRug(token);
+      }
+
+      // Keep feed reasonable
+      while (feed.children.length > 50) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    function showDetail(token) {
+      document.getElementById('detail-token').textContent = `$${token.ticker} — ${token.name}`;
+      setDetail('d-mint', token.mintRevoked ? 'REVOKED' : 'ACTIVE', token.mintRevoked ? 'pass' : 'fail');
+      setDetail('d-freeze', token.freezeRevoked ? 'REVOKED' : 'ACTIVE', token.freezeRevoked ? 'pass' : 'fail');
+      setDetail('d-liq', token.liqLocked ? 'LOCKED' : 'UNLOCKED', token.liqLocked ? 'pass' : 'fail');
+      setDetail('d-holder', token.topHolderPct.toFixed(1) + '%', token.topHolderPct < 20 ? 'pass' : token.topHolderPct < 40 ? 'warn' : 'fail');
+      setDetail('d-burn', token.lpBurned ? 'YES' : 'NO', token.lpBurned ? 'pass' : 'fail');
+      setDetail('d-verified', token.verified ? 'YES' : 'NO', token.verified ? 'pass' : 'warn');
+      setDetail('d-holders', token.holderCount.toLocaleString(), token.holderCount > 500 ? 'pass' : token.holderCount > 100 ? 'warn' : 'fail');
+      setDetail('d-age', token.ageHours < 24 ? token.ageHours + 'h' : Math.floor(token.ageHours / 24) + 'd', token.ageHours > 72 ? 'pass' : token.ageHours > 24 ? 'warn' : 'fail');
+    }
+
+    function setDetail(id, text, cls) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'detail-val ' + cls;
+    }
+
+    function addRecentRug(token) {
+      const list = document.getElementById('rug-list');
+      const row = document.createElement('div');
+      row.className = 'rug-row';
+
+      const loss = (Math.random() * 500 + 10).toFixed(0);
+
+      row.innerHTML = `
+        <div class="rug-name">
+          ${token.name}
+          <span class="sub">$${token.ticker} — Risk: ${token.risk}</span>
+        </div>
+        <div class="rug-loss">-$${parseFloat(loss) > 100 ? (loss / 1000).toFixed(0) + 'K' : loss}</div>
+        <div class="rug-time">${token.time.toLocaleTimeString('en-US', { hour12: false })}</div>
+      `;
+
+      list.insertBefore(row, list.firstChild);
+
+      while (list.children.length > 10) {
+        list.removeChild(list.lastChild);
+      }
+    }
+
+    // ===== ENGINE =====
+    function startScanner() {
+      // Initial burst
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => addTokenToFeed(generateToken()), i * 400);
+      }
+
+      // Ongoing — random interval 3-8 seconds
+      function next() {
+        const delay = 3000 + Math.random() * 5000;
+        setTimeout(() => {
+          addTokenToFeed(generateToken());
+          next();
+        }, delay);
+      }
+      next();
+    }
+
+    // ===== INIT =====
+    startScanner();
+  </script>
+</body>
+</html>
